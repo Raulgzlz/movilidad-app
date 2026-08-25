@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0F12" />
+    <meta
+      name="description"
+      content="Flujos guiados de movilidad y alivio postural. 100% offline: tus datos nunca salen de tu dispositivo."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <title>Movilidad · Alivio Postural Local</title>
+    <script>
+      // Aplica el tema guardado antes del primer paint (evita flash de tema).
+      try {
+        var t = localStorage.getItem('movi-theme');
+        if (t === 'light') document.documentElement.classList.remove('dark');
+        else document.documentElement.classList.add('dark');
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Movilidad Local requiere JavaScript para funcionar.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
