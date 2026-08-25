@@ -6,10 +6,16 @@ interface UserState {
   name: string;
   theme: ThemeMode;
   soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  breathVoiceEnabled: boolean;
+  settingsOpen: boolean;
   setName: (name: string) => void;
   toggleTheme: () => void;
   setTheme: (theme: ThemeMode) => void;
   toggleSound: () => void;
+  toggleHaptics: () => void;
+  toggleBreathVoice: () => void;
+  setSettingsOpen: (open: boolean) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -18,15 +24,27 @@ export const useUserStore = create<UserState>()(
       name: 'Tú',
       theme: 'light', // Modo claro/limpio por defecto
       soundEnabled: true,
+      hapticsEnabled: true,
+      breathVoiceEnabled: true,
+      settingsOpen: false,
       setName: (name) => set({ name }),
       toggleTheme: () =>
         set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       setTheme: (theme) => set({ theme }),
       toggleSound: () => set((s) => ({ soundEnabled: !s.soundEnabled })),
+      toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
+      toggleBreathVoice: () => set((s) => ({ breathVoiceEnabled: !s.breathVoiceEnabled })),
+      setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     }),
     {
       name: 'movi-user-prefs',
-      partialize: (s) => ({ name: s.name, theme: s.theme, soundEnabled: s.soundEnabled }),
+      partialize: (s) => ({
+        name: s.name,
+        theme: s.theme,
+        soundEnabled: s.soundEnabled,
+        hapticsEnabled: s.hapticsEnabled,
+        breathVoiceEnabled: s.breathVoiceEnabled,
+      }),
     },
   ),
 );

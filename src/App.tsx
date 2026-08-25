@@ -1,39 +1,41 @@
 import { useEffect, useState } from 'react';
 import {
-  Sparkles,
-  Bookmark,
-  BarChart2,
   Settings,
   Home as HomeIcon,
-  Activity,
-  Layers,
+  Compass,
+  TrendingUp,
+  Flame,
 } from 'lucide-react';
 import { ensureSeeded } from './db/dexie';
 import { BendHomeScreen } from './components/dashboard/BendHomeScreen';
-import { BodyTensionMap } from './components/dashboard/BodyTensionMap';
-import { StatsCard, useConsistency } from './components/dashboard/StatsCard';
-import { HeatmapGrid } from './components/dashboard/HeatmapGrid';
-import { QuickRelief } from './components/dashboard/QuickRelief';
+import { RutinasScreen } from './components/library/RutinasScreen';
+import { TuViajeScreen } from './components/dashboard/TuViajeScreen';
+import { PreWorkoutModal } from './components/dashboard/PreWorkoutModal';
 import { QuizModal } from './components/quiz/QuizModal';
 import { GuidedPlayer } from './components/player/GuidedPlayer';
-import { FilterBar } from './components/library/FilterBar';
-import { BackupRestore } from './components/settings/BackupRestore';
+import { SettingsModal } from './components/settings/SettingsModal';
 import { useWorkoutStore } from './stores/useWorkoutStore';
-import { useQuizStore } from './stores/useQuizStore';
+import { useUserStore } from './stores/useUserStore';
+import { useConsistency } from './components/dashboard/StatsCard';
+import type { PredefinedSeries } from './data/series';
+import type { Exercise } from './types/exercise';
 import { cn } from './components/common/Button';
 
-type MainTab = 'inicio' | 'biblioteca' | 'personalizar' | 'progreso' | 'ajustes';
-type ProgressSubTab = 'mapa' | 'stats';
+type MainTab = 'inicio' | 'rutinas' | 'viaje';
 
 export default function App() {
   const [tab, setTab] = useState<MainTab>('inicio');
-  const [progSub, setProgSub] = useState<ProgressSubTab>('mapa');
   const [booted, setBooted] = useState(false);
+  const [selectedSeries, setSelectedSeries] = useState<{
+    series: PredefinedSeries;
+    exercises: Exercise[];
+  } | null>(null);
+
   const phase = useWorkoutStore((s) => s.phase);
-  const openQuiz = useQuizStore((s) => s.openQuiz);
+  const setSettingsOpen = useUserStore((s) => s.setSettingsOpen);
   const { streak } = useConsistency();
 
-  // Boot: sembrar librería de ejercicios
+  // Boot: ensure exercises are seeded
   useEffect(() => {
     const run = async () => {
       try {
@@ -62,179 +64,106 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-primary)] antialiased transition-colors duration-300">
-      {/* Fondo suave */}
+      {/* Soft Backdrop */}
       <div className="app-backdrop" />
 
       {inSession ? (
         <GuidedPlayer onFinish={() => useWorkoutStore.getState().abortSession()} />
       ) : (
-        <main className="mx-auto w-full max-w-md px-4 sm:px-6 pt-2">
-          {/* TAB 1: INICIO (Bend-Style Easy to Start Home) */}
-          {tab === 'inicio' && (
-            <BendHomeScreen streak={streak} />
-          )}
-
-          {/* TAB 2: BIBLIOTECA (Saved / 30+ Movement Catalog) */}
-          {tab === 'biblioteca' && (
-            <div className="flex flex-col gap-4 pb-28 pt-4 animate-fade-in">
-              <div>
-                <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
-                  Librería de Movimientos
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Más de 30 ejercicios biomecánicos verificados (McGill, FRC, Janda)
-                </p>
-              </div>
-              <FilterBar />
+        <div className="flex flex-col min-h-screen">
+          {/* ── TOP APP HEADER (Stitch Screen 1) ── */}
+          <header className="sticky top-0 z-20 mx-auto w-full max-w-md px-4 sm:px-6 pt-3 pb-2 bg-[var(--canvas)]/85 backdrop-blur-xl flex items-center justify-between border-b border-slate-200/50 dark:border-white/5">
+            {/* Logo / Brand Title */}
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-600 text-white font-black text-xs shadow-xs">
+                M
+              </span>
+              <span className="font-extrabold tracking-tight text-slate-900 dark:text-slate-50 text-base">
+                MOVILIDAD
+              </span>
             </div>
-          )}
 
-          {/* TAB 3: PERSONALIZAR (AI / Custom Routine Builder Wizard) */}
-          {tab === 'personalizar' && (
-            <div className="flex flex-col gap-4 pb-28 pt-4 animate-fade-in text-center items-center justify-center min-h-[65vh]">
-              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-md">
-                <Sparkles className="h-8 w-8" />
+            {/* Streak Pill & Settings Gear */}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-extrabold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Flame className="h-3.5 w-3.5 fill-amber-500" />
+                <span>{streak || 1} DÍAS</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
-                Generador a Medida
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
-                Diseña un flujo específico eligiendo tus articulaciones diana, tiempo disponible y postura.
-              </p>
+
               <button
-                onClick={openQuiz}
-                className="mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3.5 px-6 shadow-lg shadow-emerald-500/25 transition-all active:scale-95 cursor-pointer"
+                onClick={() => setSettingsOpen(true)}
+                aria-label="Ajustes"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
               >
-                <Sparkles className="h-4 w-4" />
-                <span>Abrir Configurador de Flujo</span>
+                <Settings className="h-4 w-4" />
               </button>
             </div>
-          )}
+          </header>
 
-          {/* TAB 4: PROGRESO (Body Tension Map, Posture Score & Consistency Heatmap) */}
-          {tab === 'progreso' && (
-            <div className="flex flex-col gap-5 pb-28 pt-4 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
-                    Progreso Corporal
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Biometría por articulación y consistencia
-                  </p>
-                </div>
-              </div>
+          {/* ── MAIN CONTENT AREA ── */}
+          <main className="mx-auto w-full max-w-md px-4 sm:px-6 flex-1">
+            {/* TAB 1: INICIO (Daily Launchpad & Quick Filters) */}
+            {tab === 'inicio' && <BendHomeScreen streak={streak} />}
 
-              {/* Sub-selector entre Mapa y Racha */}
-              <div className="flex rounded-2xl bg-slate-200/60 dark:bg-white/5 p-1 border border-slate-200/80 dark:border-white/10">
+            {/* TAB 2: RUTINAS (3 User Paths & Movement Library) */}
+            {tab === 'rutinas' && (
+              <RutinasScreen
+                onSelectSeries={(series, exercises) =>
+                  setSelectedSeries({ series, exercises })
+                }
+              />
+            )}
+
+            {/* TAB 3: TU VIAJE (Weekly Insights, Joint Balance & 26w Heatmap) */}
+            {tab === 'viaje' && <TuViajeScreen />}
+          </main>
+
+          {/* ── 3-TAB FLOATING BOTTOM NAVIGATION BAR (Stitch Design) ── */}
+          <nav className="fixed bottom-4 left-1/2 z-30 w-[90%] max-w-sm -translate-x-1/2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-surface/90 px-3 py-1.5 backdrop-blur-2xl shadow-[0_12px_32px_-8px_rgba(0,0,0,0.14)]">
+            <div className="flex items-center justify-around">
+              {(
+                [
+                  { id: 'inicio', label: 'Inicio', Icon: HomeIcon },
+                  { id: 'rutinas', label: 'Rutinas', Icon: Compass },
+                  { id: 'viaje', label: 'Tu Viaje', Icon: TrendingUp },
+                ] as const
+              ).map(({ id, label, Icon }) => (
                 <button
-                  onClick={() => setProgSub('mapa')}
+                  key={id}
+                  onClick={() => setTab(id)}
+                  aria-label={label}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer',
-                    progSub === 'mapa'
-                      ? 'bg-white dark:bg-surface text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-white/10'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
+                    'flex items-center gap-2 py-2 px-4 rounded-full transition-all duration-200 cursor-pointer',
+                    tab === id
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold shadow-2xs'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium'
                   )}
                 >
-                  <Activity className="h-3.5 w-3.5 text-emerald-500" />
-                  <span>Mapa de Tensión</span>
+                  <Icon className="h-4 w-4" strokeWidth={tab === id ? 2.5 : 2} />
+                  <span className="text-xs">{label}</span>
                 </button>
-                <button
-                  onClick={() => setProgSub('stats')}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer',
-                    progSub === 'stats'
-                      ? 'bg-white dark:bg-surface text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-white/10'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'
-                  )}
-                >
-                  <Layers className="h-3.5 w-3.5 text-skyx-500" />
-                  <span>Historial de Racha</span>
-                </button>
-              </div>
-
-              {progSub === 'mapa' ? (
-                <div className="flex flex-col gap-4 animate-fade-in">
-                  <BodyTensionMap />
-                  <QuickRelief />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4 animate-fade-in">
-                  <StatsCard />
-                  <section className="flex flex-col gap-2.5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Consistencia Anual (26 Semanas)
-                    </h3>
-                    <HeatmapGrid />
-                  </section>
-                </div>
-              )}
+              ))}
             </div>
-          )}
-
-          {/* TAB 5: AJUSTES (Settings, Backup & Privacy) */}
-          {tab === 'ajustes' && (
-            <div className="flex flex-col gap-5 pb-28 pt-4 animate-fade-in">
-              <div>
-                <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50">
-                  Ajustes & Respaldo
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Gestión local de datos y copias JSON
-                </p>
-              </div>
-
-              <BackupRestore />
-
-              <div className="rounded-3xl bg-white dark:bg-surface p-5 text-xs text-secondary border border-slate-200/60 dark:border-white/5 shadow-2xs">
-                <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">
-                  Arquitectura 100% Local-First
-                </p>
-                <p className="mt-1.5 leading-relaxed">
-                  Tus datos se guardan estrictamente en la memoria de este dispositivo (IndexedDB). Cero rastreo, sin servidores externos.
-                </p>
-                <p className="mt-3 text-[11px] text-slate-400">
-                  Versión 1.0.0 · Licencia $9 USD de Pago Único
-                </p>
-              </div>
-            </div>
-          )}
-        </main>
+          </nav>
+        </div>
       )}
 
-      {/* Modal de generador de rutinas */}
+      {/* Selected series modal from Rutinas tab */}
+      {selectedSeries && (
+        <PreWorkoutModal
+          open={!!selectedSeries}
+          onClose={() => setSelectedSeries(null)}
+          title={selectedSeries.series.title}
+          subtitle={selectedSeries.series.subtitle}
+          initialExercises={selectedSeries.exercises}
+        />
+      )}
+
+      {/* Routine Custom Quiz Builder Wizard (Path 3) */}
       <QuizModal />
 
-      {/* 5-Menu Floating Bottom Navigation Bar (Exact Bend Style) */}
-      {!inSession && (
-        <nav className="fixed bottom-4 left-1/2 z-30 w-[92%] max-w-sm -translate-x-1/2 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-surface/95 px-4 py-2 backdrop-blur-2xl shadow-[0_12px_30px_-8px_rgba(0,0,0,0.12)]">
-          <div className="flex items-center justify-between">
-            {(
-              [
-                { id: 'inicio', label: 'Inicio', Icon: HomeIcon },
-                { id: 'biblioteca', label: 'Guardados', Icon: Bookmark },
-                { id: 'personalizar', label: 'Crear', Icon: Sparkles },
-                { id: 'progreso', label: 'Progreso', Icon: BarChart2 },
-                { id: 'ajustes', label: 'Ajustes', Icon: Settings },
-              ] as const
-            ).map(({ id, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                aria-label={id}
-                className={cn(
-                  'flex flex-col items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer',
-                  tab === id
-                    ? 'text-emerald-600 dark:text-emerald-400 scale-110 bg-emerald-500/10'
-                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200',
-                )}
-              >
-                <Icon className="h-5 w-5" strokeWidth={tab === id ? 2.5 : 1.8} />
-              </button>
-            ))}
-          </div>
-        </nav>
-      )}
+      {/* Settings & Privacy Drawer Modal (Header Gear Trigger) */}
+      <SettingsModal />
     </div>
   );
 }

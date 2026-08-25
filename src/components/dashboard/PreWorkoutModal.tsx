@@ -1,26 +1,8 @@
 import { useState } from 'react';
-import { Play, Minus, Plus, Armchair, Footprints, Move, Landmark, ShieldCheck, Heart } from 'lucide-react';
-import { Modal } from '../common/Modal';
-import { Button } from '../common/Button';
+import { Play, X } from 'lucide-react';
 import type { Exercise } from '../../types/exercise';
 import { useWorkoutStore, type Routine } from '../../stores/useWorkoutStore';
 import { todayKey } from '../../lib/routineEngine';
-
-const POSITION_ICONS: Record<Exercise['position'], typeof Armchair> = {
-  silla: Armchair,
-  pie: Footprints,
-  suelo: Move,
-  pared: Landmark,
-};
-
-const BADGE_COLORS = [
-  'bg-emerald-500 text-white',
-  'bg-sky-500 text-white',
-  'bg-amber-500 text-white',
-  'bg-pink-500 text-white',
-  'bg-purple-500 text-white',
-  'bg-indigo-500 text-white',
-];
 
 interface PreWorkoutModalProps {
   open: boolean;
@@ -38,8 +20,7 @@ export function PreWorkoutModal({
   initialExercises,
 }: PreWorkoutModalProps) {
   const startRoutine = useWorkoutStore((s) => s.startRoutine);
-  // Estado local para permitir ajustar la duración individual de cada ejercicio (- 45s +)
-  const [durations, setDurations] = useState<Record<string, number>>(() => {
+  const [durations] = useState<Record<string, number>>(() => {
     const map: Record<string, number> = {};
     initialExercises.forEach((e) => {
       map[e.id] = e.default_duration_sec || 45;
@@ -49,34 +30,25 @@ export function PreWorkoutModal({
 
   if (!open || initialExercises.length === 0) return null;
 
-  const updateDuration = (id: string, delta: number) => {
-    setDurations((prev) => {
-      const current = prev[id] || 45;
-      const next = Math.max(15, Math.min(180, current + delta));
-      return { ...prev, [id]: next };
-    });
-  };
-
   const totalSec = initialExercises.reduce(
     (acc, e) => acc + (durations[e.id] || e.default_duration_sec || 45),
     0,
   );
-  const totalMins = Math.ceil(totalSec / 60);
+  const totalMins = Math.max(1, Math.ceil(totalSec / 60));
 
   const handleStart = () => {
-    // Aplicar las duraciones personalizadas
     const customizedExercises = initialExercises.map((e) => ({
       ...e,
       default_duration_sec: durations[e.id] || e.default_duration_sec || 45,
     }));
 
     const routine: Routine = {
-      id: `custom-series-${todayKey()}`,
+      id: `routine-${todayKey()}-${Date.now()}`,
       kind: 'hoy',
       label: title,
       exercises: customizedExercises,
       perExerciseSec: customizedExercises[0]?.default_duration_sec || 45,
-      transitionSec: 10,
+      transitionSec: 5,
     };
 
     onClose();
@@ -84,100 +56,100 @@ export function PreWorkoutModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-1">
-        {/* Header */}
-        <div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-md animate-fade-in">
+      <div
+        className="w-full max-w-lg max-h-[88vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-surface border border-slate-200/80 dark:border-white/10 shadow-2xl animate-slide-up overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header with Close */}
+        <div className="p-5 sm:p-6 pb-3 border-b border-slate-100 dark:border-white/5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-              {totalMins} MINUTOS
+            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+              Vista Previa
             </span>
-            <Heart className="h-4 w-4 text-slate-300 hover:text-pink-500 cursor-pointer transition-colors" />
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 mt-1">
+
+          <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-50 mt-2">
             {title}
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-            {subtitle}. Ajusta la duración de cada movimiento si lo deseas.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+            {subtitle || `${initialExercises.length} movimientos · Cero sudor · Enfoque articular`}
           </p>
+
+          {/* Stats Bar (3 items) */}
+          <div className="mt-3.5 grid grid-cols-3 gap-2 rounded-2xl bg-slate-50 dark:bg-white/5 p-2.5 border border-slate-200/60 dark:border-white/5 text-center">
+            <div className="flex flex-col items-center">
+              <span className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
+                {totalMins} min total
+              </span>
+              <span className="text-[10px] text-slate-400">Duración</span>
+            </div>
+            <div className="flex flex-col items-center border-x border-slate-200/60 dark:border-white/5">
+              <span className="text-xs font-extrabold text-slate-900 dark:text-slate-100">
+                {initialExercises.length} ejercicios
+              </span>
+              <span className="text-[10px] text-slate-400">Secuencia</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                Suave
+              </span>
+              <span className="text-[10px] text-slate-400">Intensidad</span>
+            </div>
+          </div>
         </div>
 
-        {/* Exercises List with Duration Steppers (- 45s +) */}
-        <div className="flex flex-col gap-2.5 my-2">
-          {initialExercises.map((ex, index) => {
-            const PositionIcon = POSITION_ICONS[ex.position] || Armchair;
-            const badgeClass = BADGE_COLORS[index % BADGE_COLORS.length];
-            const currentDuration = durations[ex.id] || ex.default_duration_sec || 45;
+        {/* Scrollable Exercise Sequence */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 pt-3 flex flex-col gap-2.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+            Secuencia de Movimientos
+          </span>
 
-            return (
-              <div
-                key={ex.id}
-                className="flex items-center justify-between rounded-2xl bg-slate-50/80 dark:bg-white/[0.03] p-3.5 border border-slate-200/70 dark:border-white/5 transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Circular Avatar Badge (Bend Style) */}
-                  <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-extrabold shadow-sm ${badgeClass}`}
-                  >
-                    {index + 1}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                      {ex.name_es}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
-                      <span className="inline-flex items-center gap-1 capitalize">
-                        <PositionIcon className="h-3 w-3" />
-                        {ex.position}
-                      </span>
-                      {ex.bilateral && <span>· 🔄 Bilateral</span>}
-                    </div>
-                  </div>
+          {initialExercises.map((ex, idx) => (
+            <div
+              key={ex.id}
+              className="flex items-center justify-between rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 p-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white font-extrabold text-xs shadow-xs">
+                  {idx + 1}
                 </div>
-
-                {/* Duration Stepper Controls (- 45s +) */}
-                <div className="flex items-center gap-1.5 shrink-0 ml-2 bg-white dark:bg-surface rounded-xl p-1 border border-slate-200/80 dark:border-white/10 shadow-xs">
-                  <button
-                    onClick={() => updateDuration(ex.id, -15)}
-                    aria-label="Disminuir tiempo"
-                    className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-90 cursor-pointer"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="tabular text-xs font-extrabold text-slate-800 dark:text-slate-200 w-9 text-center">
-                    {currentDuration}s
-                  </span>
-                  <button
-                    onClick={() => updateDuration(ex.id, 15)}
-                    aria-label="Aumentar tiempo"
-                    className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all active:scale-90 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    {ex.name_es}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {ex.target_joints.join(', ')} · {ex.position === 'silla' ? '🪑 Silla' : '🧘 Suelo'}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+
+              <div className="flex items-center gap-1.5 font-extrabold text-xs text-slate-700 dark:text-slate-300">
+                <span>{durations[ex.id] || ex.default_duration_sec}s</span>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Audio features indicator */}
-        <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 py-1">
-          <ShieldCheck className="h-4 w-4" />
-          <span>Campanas 528Hz · Olas Zen · Aviso cambio de lado</span>
-        </div>
-
-        {/* Sticky Start Button */}
-        <div className="pt-2">
-          <Button
-            size="lg"
+        {/* Fixed Bottom Action Bar */}
+        <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-white/5 bg-white dark:bg-surface">
+          <button
             onClick={handleStart}
-            className="w-full text-base font-extrabold shadow-lg shadow-emerald-500/25"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm py-4 px-6 shadow-lg shadow-emerald-600/25 transition-all active:scale-98 cursor-pointer"
           >
-            <Play className="h-5 w-5 fill-current" />
-            INICIAR SESIÓN ({totalMins} MIN)
-          </Button>
+            <Play className="h-4 w-4 fill-white" />
+            <span>Comenzar Rutina ▶</span>
+          </button>
         </div>
       </div>
-    </Modal>
+    </div>
   );
 }

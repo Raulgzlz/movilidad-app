@@ -7,13 +7,16 @@ import {
   X,
   Play,
   Sparkles,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { cn, Button } from '../common/Button';
 import { TimerRing } from './TimerRing';
 import { VideoLoop } from './VideoLoop';
 import { PlayerControls } from './PlayerControls';
-import { CompletionModal } from './CompletionModal';
+import { VictoryModal } from './VictoryModal';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
+import { useUserStore } from '../../stores/useUserStore';
 import type { Exercise } from '../../types/exercise';
 
 const POSITION_META: Record<
@@ -29,7 +32,7 @@ const POSITION_META: Record<
 function Cues({ exercise }: { exercise: Exercise }) {
   return (
     <ul className="flex flex-col gap-2">
-      {exercise.cues_es.map((cue, i) => (
+      {exercise.cues_es?.map((cue, i) => (
         <li
           key={i}
           className="flex items-start gap-2.5 text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300 animate-cue-in"
@@ -40,7 +43,7 @@ function Cues({ exercise }: { exercise: Exercise }) {
         </li>
       ))}
       {exercise.bilateral && (
-        <li className="mt-1 flex items-center gap-2 text-xs font-semibold text-skyx-600 dark:text-skyx-400">
+        <li className="mt-1 flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400">
           <Move className="h-3.5 w-3.5 shrink-0" />
           <span>Cambia de lado a la mitad del tiempo (oirás un chime suave).</span>
         </li>
@@ -62,6 +65,9 @@ export function GuidedPlayer({ onFinish }: GuidedPlayerProps) {
   const isBilateralSwitch = useWorkoutStore((s) => s.isBilateralSwitch);
   const completeSession = useWorkoutStore((s) => s.completeSession);
   const abortSession = useWorkoutStore((s) => s.abortSession);
+
+  const soundEnabled = useUserStore((s) => s.soundEnabled);
+  const toggleSound = useUserStore((s) => s.toggleSound);
 
   const exercises = routine?.exercises ?? [];
   const current: Exercise | undefined = exercises[currentIndex];
@@ -93,66 +99,64 @@ export function GuidedPlayer({ onFinish }: GuidedPlayerProps) {
   const completedBefore = currentIndex + (phase === 'transition' ? 1 : 0);
 
   const handleSkipCountdown = () => {
-    // Pasar inmediatamente a la fase activa sin esperar
     const perSec = current.default_duration_sec || routine.perExerciseSec || 45;
     useWorkoutStore.setState({
       phase: 'active',
       phaseRemaining: perSec,
-      isBilateralSwitch: false,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-[var(--canvas)] text-[var(--text-primary)]">
-      {/* Halo de fondo calmante */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-emerald-500/15 blur-3xl"
-      />
+    <div className="fixed inset-0 z-40 flex flex-col bg-canvas text-slate-900 dark:text-slate-100 overflow-y-auto">
+      {/* ── Top Bar Minimalista ── */}
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 bg-canvas/90 px-4 py-3 backdrop-blur-md">
+        <button
+          onClick={abortSession}
+          aria-label="Salir"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-      <div className="relative mx-auto flex min-h-full w-full max-w-md flex-col px-5 pb-8 safe-top safe-bottom">
-        {/* Topbar del reproductor */}
-        <div className="flex items-center justify-between pt-4">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-            {routine.label}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="tabular rounded-full bg-black/5 dark:bg-white/10 px-3 py-1 text-xs font-semibold text-secondary border border-border">
-              {currentIndex + 1} / {exercises.length}
-            </span>
-            <button
-              onClick={() => abortSession()}
-              aria-label="Salir del flujo"
-              className="btn-glass flex h-9 w-9 rounded-xl text-secondary hover:text-rose-500 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Exercise Counter */}
+        <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+          <span>{currentIndex + 1} de {exercises.length}</span>
         </div>
 
-        {/* Barra de progreso con puntos */}
-        <div className="mt-4 flex gap-1.5">
-          {exercises.map((ex, i) => (
-            <span
-              key={ex.id}
-              className={cn(
-                'h-1.5 flex-1 rounded-full transition-all duration-300',
-                i < completedBefore
-                  ? 'bg-emerald-500'
-                  : i === currentIndex && phase !== 'transition'
-                    ? 'bg-emerald-500/70'
-                    : 'bg-black/10 dark:bg-white/10',
-              )}
-            />
-          ))}
-        </div>
+        {/* Audio Toggle */}
+        <button
+          onClick={toggleSound}
+          aria-label="Silenciar"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors cursor-pointer"
+        >
+          {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+        </button>
+      </header>
 
-        {/* ── Fase 1: Countdown / Ready to Start Screen ── */}
+      {/* Progress Bars */}
+      <div className="flex gap-1 px-4 pt-2">
+        {exercises.map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              'h-1 flex-1 rounded-full transition-all duration-300',
+              i < completedBefore
+                ? 'bg-emerald-500'
+                : i === currentIndex
+                  ? 'bg-emerald-500/50 animate-pulse'
+                  : 'bg-slate-200 dark:bg-white/10'
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Main Player Canvas */}
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 sm:px-6">
+        {/* Countdown State */}
         {phase === 'countdown' && (
           <div className="flex flex-1 flex-col items-center justify-center gap-6 py-6 animate-fade-in text-center">
             <div className="flex flex-col items-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 mb-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3.5 py-1 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 mb-3">
                 <Sparkles className="h-3.5 w-3.5" />
                 ¡Ponte en Posición!
               </span>
@@ -185,7 +189,6 @@ export function GuidedPlayer({ onFinish }: GuidedPlayerProps) {
               label="Comienza en"
             />
 
-            {/* Ready to Start Button */}
             <div className="w-full max-w-xs pt-2">
               <Button
                 size="lg"
@@ -199,94 +202,94 @@ export function GuidedPlayer({ onFinish }: GuidedPlayerProps) {
           </div>
         )}
 
-        {/* ── Fase 2: Activa ── */}
+        {/* Active Exercise State (Matching Stitch Screen 3) */}
         {phase === 'active' && (
-          <div className="flex flex-1 flex-col items-center pb-4 pt-5 animate-fade-in">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="chip bg-black/5 dark:bg-white/5 text-slate-800 dark:text-slate-200">
-                <position.Icon className="h-3.5 w-3.5" />
-                {position.label}
+          <div className="flex flex-1 flex-col items-center pb-4 pt-4 animate-fade-in">
+            {/* Anatomical Target Badge */}
+            <div className="mb-2 flex items-center gap-2">
+              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                🌿 {current.target_joints.join(', ')}
               </span>
               <span className="chip bg-black/5 dark:bg-white/5 text-slate-800 dark:text-slate-200 capitalize">
-                {current.difficulty}
+                {position.label}
               </span>
             </div>
 
-            <h2 className="mb-5 w-full text-center text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-slate-50">
+            <h2 className="mb-4 w-full text-center text-xl sm:text-2xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-slate-50">
               {current.name_es}
             </h2>
 
-            <div className="flex w-full flex-col items-center gap-5">
+            <div className="flex w-full flex-col items-center gap-4">
               <VideoLoop
                 exercise={current}
                 isBilateralSwitch={isBilateralSwitch}
-                className="h-44 w-full"
+                className="h-40 w-full"
               />
               <TimerRing
                 total={current.default_duration_sec || routine.perExerciseSec || 45}
                 remaining={phaseRemaining}
-                size={190}
+                size={180}
                 breathing={current.breathing_rhythm === 'lento_profundo'}
                 label="segundos"
               />
             </div>
 
-            <div className="mt-5 w-full rounded-3xl glass p-4 border border-border">
+            {/* Coaching Cues */}
+            <div className="mt-4 w-full rounded-3xl bg-slate-50 dark:bg-white/5 p-4 border border-slate-200/60 dark:border-white/5">
               <Cues exercise={current} />
             </div>
 
-            <div className="mt-6">
+            {/* Player Controls */}
+            <div className="mt-5">
               <PlayerControls />
             </div>
           </div>
         )}
 
-        {/* ── Fase 3: Transición / Descanso ── */}
+        {/* Transition State */}
         {phase === 'transition' && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-8 py-8 animate-fade-in">
-            <div className="text-center">
-              <p className="text-xs font-bold uppercase tracking-widest text-skyx-600 dark:text-skyx-400">
-                Buen trabajo · Respira profundo
-              </p>
-              <h2 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-50">
-                Siguiente: {next?.name_es ?? 'Fin del flujo'}
-              </h2>
-            </div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8 animate-fade-in text-center">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+              Buen trabajo · Respira profundo
+            </p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">
+              Siguiente: {next?.name_es ?? 'Fin de la rutina'}
+            </h2>
             <TimerRing
               total={routine.transitionSec}
               remaining={phaseRemaining}
-              color="stroke-skyx-500"
+              color="stroke-sky-500"
               breathing
               label="Pausa"
             />
           </div>
         )}
 
-        {/* ── Fase 4: Completado ── */}
+        {/* Victory Screen State */}
         {phase === 'complete' && (
-          <CompletionModal
+          <VictoryModal
             open
-            onFinish={(rating) => {
-              completeSession(rating);
+            onFinish={() => {
+              completeSession(5);
               onFinish();
             }}
           />
         )}
       </div>
 
-      {/* Overlay de pausa */}
+      {/* Paused Overlay */}
       {paused && phase !== 'complete' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md animate-fade-in">
-          <div className="glass-strong flex flex-col items-center gap-4 rounded-3xl p-8 max-w-xs mx-4 text-center">
-            <p className="text-xl font-bold text-slate-900 dark:text-slate-50">En pausa</p>
-            <p className="text-xs text-secondary leading-relaxed">
-              Tómate el tiempo que necesites. Tu sesión y cronómetro te esperan.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md animate-fade-in">
+          <div className="flex flex-col items-center gap-4 rounded-3xl bg-white dark:bg-surface border border-slate-200 dark:border-white/10 p-8 max-w-xs mx-4 text-center shadow-2xl">
+            <p className="text-xl font-bold text-slate-900 dark:text-slate-50">En Pausa</p>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Tómate el tiempo que necesites. Tu rutina se reanudará cuando estés listo.
             </p>
             <button
-              className="btn-primary min-h-[46px] px-8 text-sm font-bold w-full"
+              className="rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs py-3.5 px-6 shadow-md shadow-emerald-600/25 transition-all active:scale-95 cursor-pointer w-full"
               onClick={() => useWorkoutStore.getState().togglePause()}
             >
-              Reanudar Flujo
+              Reanudar Flujo ▶
             </button>
           </div>
         </div>

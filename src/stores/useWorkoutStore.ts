@@ -6,7 +6,7 @@ import { releaseWakeLock, requestWakeLock } from '../lib/wakeLock';
 import type { Exercise } from '../types/exercise';
 
 export type Phase = 'idle' | 'countdown' | 'active' | 'transition' | 'complete';
-export type RoutineKind = 'hoy' | 'quiz' | 'sos';
+export type RoutineKind = 'hoy' | 'quiz' | 'sos' | 'custom';
 
 export interface Routine {
   id: string;
